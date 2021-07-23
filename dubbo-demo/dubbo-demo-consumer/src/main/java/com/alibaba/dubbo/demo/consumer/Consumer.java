@@ -29,7 +29,8 @@ public class Consumer {
         context.start();
         DemoService demoService = (DemoService) context.getBean("demoService"); // get remote service proxy
 
-        while (true) {
+        int i = 10;
+        while (i-- > 0) {
             try {
                 Thread.sleep(1000);
                 String hello = demoService.sayHello("world"); // call remote method

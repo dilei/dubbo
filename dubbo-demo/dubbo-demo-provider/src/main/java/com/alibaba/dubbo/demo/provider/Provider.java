@@ -16,6 +16,7 @@
  */
 package com.alibaba.dubbo.demo.provider;
 
+import com.alibaba.dubbo.demo.DemoService;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class Provider {
@@ -27,7 +28,24 @@ public class Provider {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(new String[]{"META-INF/spring/dubbo-demo-provider.xml"});
         context.start();
 
-        System.in.read(); // press any key to exit
+        // local protocol, must in one progress
+        DemoService demoService = context.getBean("demoService", DemoService.class);
+
+        int i = 10;
+        while (i-- > 0) {
+            System.out.println(i);
+            try {
+                Thread.sleep(1000);
+                String hello = demoService.sayHello("world");
+                System.out.println(hello);
+
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        }
+
+        // press any key to exit
+        System.in.read();
     }
 
 }
