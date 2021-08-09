@@ -29,7 +29,7 @@ public class Consumer {
         context.start();
         DemoService demoService = (DemoService) context.getBean("demoService"); // get remote service proxy
 
-        int i = 10;
+        int i = 10000;
         while (i-- > 0) {
             try {
                 Thread.sleep(1000);
