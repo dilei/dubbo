@@ -16,15 +16,17 @@
  */
 package org.apache.dubbo.rpc.cluster.filter;
 
+import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.extension.Activate;
-import org.apache.dubbo.common.extension.ExtensionLoader;
+import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.rpc.Filter;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.cluster.ClusterInvoker;
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
 
 import java.util.List;
 
-@Activate(order = 0)
+@Activate
 public class DefaultFilterChainBuilder implements FilterChainBuilder {
 
     /**
@@ -33,9 +35,10 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
     @Override
     public <T> Invoker<T> buildInvokerChain(final Invoker<T> originalInvoker, String key, String group) {
         Invoker<T> last = originalInvoker;
-        List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(originalInvoker.getUrl(), key, group);
+        URL url = originalInvoker.getUrl();
+        List<Filter> filters = ScopeModelUtil.getExtensionLoader(Filter.class, url.getScopeModel()).getActivateExtension(url, key, group);
 
-        if (!filters.isEmpty()) {
+        if (!CollectionUtils.isEmpty(filters)) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final Filter filter = filters.get(i);
                 final Invoker<T> next = last;
@@ -52,9 +55,10 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
     @Override
     public <T> ClusterInvoker<T> buildClusterInvokerChain(final ClusterInvoker<T> originalInvoker, String key, String group) {
         ClusterInvoker<T> last = originalInvoker;
-        List<ClusterFilter> filters = ExtensionLoader.getExtensionLoader(ClusterFilter.class).getActivateExtension(originalInvoker.getUrl(), key, group);
+        URL url = originalInvoker.getUrl();
+        List<ClusterFilter> filters = ScopeModelUtil.getExtensionLoader(ClusterFilter.class, url.getScopeModel()).getActivateExtension(url, key, group);
 
-        if (!filters.isEmpty()) {
+        if (!CollectionUtils.isEmpty(filters)) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final ClusterFilter filter = filters.get(i);
                 final Invoker<T> next = last;

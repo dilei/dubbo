@@ -21,6 +21,7 @@ import org.apache.dubbo.common.url.component.ServiceConfigURL;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -114,7 +115,16 @@ public class MetadataReportConfig extends AbstractConfig {
     public MetadataReportConfig() {
     }
 
+    public MetadataReportConfig(ApplicationModel applicationModel) {
+        super(applicationModel);
+    }
+
     public MetadataReportConfig(String address) {
+        setAddress(address);
+    }
+
+    public MetadataReportConfig(ApplicationModel applicationModel, String address) {
+        super(applicationModel);
         setAddress(address);
     }
 
@@ -124,7 +134,7 @@ public class MetadataReportConfig extends AbstractConfig {
             throw new IllegalArgumentException("The address of metadata report is invalid.");
         }
         Map<String, String> map = new HashMap<String, String>();
-        URL url = URL.valueOf(address);
+        URL url = URL.valueOf(address, getScopeModel());
         // Issue : https://github.com/apache/dubbo/issues/6491
         // Append the parameters from address
         map.putAll(url.getParameters());
@@ -135,7 +145,7 @@ public class MetadataReportConfig extends AbstractConfig {
         // put the protocol of URL as the "metadata"
         map.put("metadata", url.getProtocol());
         return new ServiceConfigURL("metadata", url.getUsername(), url.getPassword(), url.getHost(),
-                url.getPort(), url.getPath(), map);
+                url.getPort(), url.getPath(), map).setScopeModel(getScopeModel());
 
     }
 

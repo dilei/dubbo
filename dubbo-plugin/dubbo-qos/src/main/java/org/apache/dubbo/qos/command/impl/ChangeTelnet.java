@@ -16,14 +16,15 @@
  */
 package org.apache.dubbo.qos.command.impl;
 
+import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
+import org.apache.dubbo.common.utils.ArrayUtils;
 import org.apache.dubbo.qos.command.BaseCommand;
 import org.apache.dubbo.qos.command.CommandContext;
 import org.apache.dubbo.qos.command.annotation.Cmd;
 import org.apache.dubbo.rpc.Exporter;
+import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol;
-
-import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
 
 @Cmd(name = "cd", summary = "Change default service.", example = {
     "cd [service]"
@@ -32,11 +33,17 @@ public class ChangeTelnet implements BaseCommand {
 
     public static final AttributeKey<String> SERVICE_KEY = AttributeKey.valueOf("telnet.service");
 
+    private DubboProtocol dubboProtocol;
+
+    public ChangeTelnet(FrameworkModel frameworkModel) {
+        this.dubboProtocol = DubboProtocol.getDubboProtocol(frameworkModel);
+    }
+
     @Override
     public String execute(CommandContext commandContext, String[] args) {
         Channel channel = commandContext.getRemote();
 
-        if (args == null || args.length < 1) {
+        if (ArrayUtils.isEmpty(args)) {
             return "Please input service name, eg: \r\ncd XxxService\r\ncd com.xxx.XxxService";
         }
         String message = args[0];
@@ -46,7 +53,7 @@ public class ChangeTelnet implements BaseCommand {
             buf.append("Cancelled default service ").append(service).append(".");
         } else {
             boolean found = false;
-            for (Exporter<?> exporter : DubboProtocol.getDubboProtocol().getExporters()) {
+            for (Exporter<?> exporter : dubboProtocol.getExporters()) {
                 if (message.equals(exporter.getInvoker().getInterface().getSimpleName())
                     || message.equals(exporter.getInvoker().getInterface().getName())
                     || message.equals(exporter.getInvoker().getUrl().getPath())) {

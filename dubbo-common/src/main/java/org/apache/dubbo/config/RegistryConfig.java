@@ -20,6 +20,7 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.Map;
 
@@ -94,7 +95,7 @@ public class RegistryConfig extends AbstractConfig {
     private String version;
 
     /**
-     * Request timeout in milliseconds for register center
+     * Connect timeout in milliseconds for register center
      */
     private Integer timeout;
 
@@ -186,11 +187,26 @@ public class RegistryConfig extends AbstractConfig {
     public RegistryConfig() {
     }
 
+    public RegistryConfig(ApplicationModel applicationModel) {
+        super(applicationModel);
+    }
+
     public RegistryConfig(String address) {
         setAddress(address);
     }
 
+    public RegistryConfig(ApplicationModel applicationModel, String address) {
+        super(applicationModel);
+        setAddress(address);
+    }
+
     public RegistryConfig(String address, String protocol) {
+        setAddress(address);
+        setProtocol(protocol);
+    }
+
+    public RegistryConfig(ApplicationModel applicationModel, String address, String protocol) {
+        super(applicationModel);
         setAddress(address);
         setProtocol(protocol);
     }
@@ -207,8 +223,6 @@ public class RegistryConfig extends AbstractConfig {
 
     public void setProtocol(String protocol) {
         this.protocol = protocol;
-        // protocol as id is inappropriate, registries's protocol may be duplicated
-//        this.updateIdIfAbsent(protocol);
     }
 
     @Parameter(excluded = true)
@@ -327,7 +341,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setTransporter(String transporter) {
-        /*if(transporter != null && transporter.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(transporter)){
+        /*if(transporter != null && transporter.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(transporter)){
             throw new IllegalStateException("No such transporter type : " + transporter);
         }*/
         this.transporter = transporter;
@@ -338,7 +352,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setServer(String server) {
-        /*if(server != null && server.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(server)){
+        /*if(server != null && server.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(server)){
             throw new IllegalStateException("No such server type : " + server);
         }*/
         this.server = server;
@@ -349,7 +363,7 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     public void setClient(String client) {
-        /*if(client != null && client.length() > 0 && ! ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(client)){
+        /*if(client != null && client.length() > 0 && ! this.getExtensionLoader(Transporter.class).hasExtension(client)){
             throw new IllegalStateException("No such client type : " + client);
         }*/
         this.client = client;

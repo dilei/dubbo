@@ -16,6 +16,8 @@
  */
 package org.apache.dubbo.qos.command.impl;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.qos.command.BaseCommand;
@@ -27,10 +29,8 @@ import org.apache.dubbo.remoting.utils.PayloadDropper;
 import org.apache.dubbo.rpc.Exporter;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.RpcStatus;
+import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.protocol.dubbo.DubboProtocol;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -38,11 +38,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_TIMEOUT;
+import static org.apache.dubbo.qos.server.handler.QosProcessHandler.PROMPT;
 
 @Cmd(name = "count", summary = "Count the service.", example = {
     "count [service] [method] [times]"
 })
 public class CountTelnet implements BaseCommand {
+    private DubboProtocol dubboProtocol;
+
+    public CountTelnet(FrameworkModel frameworkModel) {
+        this.dubboProtocol = DubboProtocol.getDubboProtocol(frameworkModel);
+    }
+
     @Override
     public String execute(CommandContext commandContext, String[] args) {
         Channel channel = commandContext.getRemote();
@@ -74,7 +81,7 @@ public class CountTelnet implements BaseCommand {
         }
         final int t = Integer.parseInt(times);
         Invoker<?> invoker = null;
-        for (Exporter<?> exporter : DubboProtocol.getDubboProtocol().getExporters()) {
+        for (Exporter<?> exporter : dubboProtocol.getExporters()) {
             if (service.equals(exporter.getInvoker().getInterface().getSimpleName())
                 || service.equals(exporter.getInvoker().getInterface().getName())
                 || service.equals(exporter.getInvoker().getUrl().getPath())) {
@@ -86,7 +93,6 @@ public class CountTelnet implements BaseCommand {
             if (t > 0) {
                 final String mtd = method;
                 final Invoker<?> inv = invoker;
-                final String prompt = "telnet";
                 Thread thread = new Thread(() -> {
                     for (int i = 0; i < t; i++) {
                         String result = count(inv, mtd);
@@ -103,7 +109,7 @@ public class CountTelnet implements BaseCommand {
                         }
                     }
                     try {
-                        send(channel, "\r\n" + prompt + "> ");
+                        send(channel, "\r\n" + PROMPT);
                     } catch (RemotingException ignored) {
                     }
                 }, "TelnetCount");

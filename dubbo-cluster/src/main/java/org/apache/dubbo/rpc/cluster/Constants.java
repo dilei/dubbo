@@ -32,6 +32,22 @@ public interface Constants {
 
     String FORCE_KEY = "force";
 
+    String RAW_RULE_KEY = "rawRule";
+
+    String VALID_KEY = "valid";
+
+    String ENABLED_KEY = "enabled";
+
+    String DYNAMIC_KEY = "dynamic";
+
+    String SCOPE_KEY = "scope";
+
+    String KEY_KEY = "key";
+
+    String CONDITIONS_KEY = "conditions";
+
+    String TAGS_KEY = "tags";
+
     /**
      * To decide whether to exclude unavailable invoker from the cluster
      */
@@ -92,10 +108,6 @@ public interface Constants {
      */
     String ROUTER_KEY = "router";
 
-    /**
-     * The key for state router
-     */
-    String STATE_ROUTER_KEY="stateRouter";
     /**
      * The key name for reference URL in register center
      */

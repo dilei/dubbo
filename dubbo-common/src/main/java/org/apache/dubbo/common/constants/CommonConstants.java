@@ -41,6 +41,8 @@ public interface CommonConstants {
 
     String METADATA_SERVICE_PORT_KEY = "metadata-service-port";
 
+    String METADATA_SERVICE_PROTOCOL_KEY = "metadata-service-protocol";
+
     String LIVENESS_PROBE_KEY = "liveness-probe";
 
     String READINESS_PROBE_KEY = "readiness-probe";
@@ -135,6 +137,8 @@ public interface CommonConstants {
     String TIMEOUT_KEY = "timeout";
 
     int DEFAULT_TIMEOUT = 1000;
+
+    String SESSION_KEY = "session";
 
     // used by invocation attachments to transfer timeout from Consumer to Provider.
     // works as a replacement of TIMEOUT_KEY on wire, which seems to be totally useless in previous releases).
@@ -304,6 +308,8 @@ public interface CommonConstants {
 
     String INVOKER_LISTENER_KEY = "invoker.listener";
 
+    String REGISTRY_PROTOCOL_LISTENER_KEY = "registry.protocol.listener";
+
     String DUBBO_VERSION_KEY = "dubbo";
 
     String TAG_KEY = "dubbo.tag";
@@ -320,10 +326,6 @@ public interface CommonConstants {
     String SERVICE_FILTER_KEY = "service.filter";
 
     String EXPORTER_LISTENER_KEY = "exporter.listener";
-
-    String METRICS_PORT = "metrics.port";
-
-    String METRICS_PROTOCOL = "metrics.protocol";
 
     /**
      * After simplify the registry, should add some parameter individually for provider.
@@ -450,6 +452,10 @@ public interface CommonConstants {
 
     int DEFAULT_REFER_THREAD_NUM = 10;
 
+    int DEFAULT_DELAY_NOTIFICATION_TIME = 5000;
+
+    int DEFAULT_DELAY_EXECUTE_TIMES = 10;
+
     /**
      * Url merge processor key
      */
@@ -464,6 +470,10 @@ public interface CommonConstants {
 
     String SERVICE_NAME_MAPPING_KEY = "service-name-mapping";
 
+    String SCOPE_MODEL = "scopeModel";
+
+    String SERVICE_MODEL = "serviceModel";
+
     /**
      * The property name for {@link NetworkInterface#getDisplayName() the name of network interface} that
      * the Dubbo application will be ignored
@@ -472,4 +482,25 @@ public interface CommonConstants {
      */
     String DUBBO_NETWORK_IGNORED_INTERFACE = "dubbo.network.interface.ignored";
 
+    String OS_NAME_KEY = "os.name";
+
+    String OS_LINUX_PREFIX = "linux";
+
+    String OS_WIN_PREFIX = "win";
+
+    String RECONNECT_TASK_TRY_COUNT = "dubbo.reconnect.reconnectTaskTryCount";
+
+    int DEFAULT_RECONNECT_TASK_TRY_COUNT = 10;
+
+    String RECONNECT_TASK_PERIOD = "dubbo.reconnect.reconnectTaskPeriod";
+
+    int DEFAULT_RECONNECT_TASK_PERIOD = 1000;
+
+    String RESELECT_COUNT = "dubbo.reselect.count";
+
+    int DEFAULT_RESELECT_COUNT = 10;
+
+    String ENABLE_CONNECTIVITY_VALIDATION = "dubbo.connectivity.validation";
+
+    String DUBBO_INTERNAL_APPLICATION = "DUBBO_INTERNAL_APPLICATION";
 }

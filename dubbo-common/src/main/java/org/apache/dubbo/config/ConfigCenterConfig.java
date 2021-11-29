@@ -22,6 +22,7 @@ import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.common.utils.UrlUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -114,6 +115,10 @@ public class ConfigCenterConfig extends AbstractConfig {
     public ConfigCenterConfig() {
     }
 
+    public ConfigCenterConfig(ApplicationModel applicationModel) {
+        super(applicationModel);
+    }
+
     @Override
     protected void checkDefault() {
         super.checkDefault();
@@ -149,7 +154,7 @@ public class ConfigCenterConfig extends AbstractConfig {
         if (StringUtils.isEmpty(map.get(PROTOCOL_KEY))) {
             map.put(PROTOCOL_KEY, ZOOKEEPER_PROTOCOL);
         }
-        return UrlUtils.parseURL(address, map);
+        return UrlUtils.parseURL(address, map).setScopeModel(getScopeModel());
     }
 
     public boolean checkOrUpdateInitialized(boolean update) {

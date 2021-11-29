@@ -21,12 +21,14 @@ import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.common.utils.Page;
 import org.apache.dubbo.registry.client.DefaultServiceInstance;
 import org.apache.dubbo.registry.client.ServiceInstance;
-
-import org.apache.curator.test.TestingServer;
 import org.apache.dubbo.registry.client.event.ServiceInstancesChangedEvent;
 import org.apache.dubbo.registry.client.event.listener.ServiceInstancesChangedListener;
+import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.util.collections.Sets;
 
@@ -37,7 +39,6 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static java.util.Arrays.asList;
-import static org.apache.dubbo.common.utils.NetUtils.getAvailablePort;
 import static org.apache.dubbo.registry.client.metadata.ServiceInstanceMetadataUtils.INSTANCE_REVISION_UPDATED_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,19 +55,20 @@ public class ZookeeperServiceDiscoveryTest {
 
     private static final String LOCALHOST = "127.0.0.1";
 
-    private TestingServer zkServer;
-    private int zkServerPort;
     private URL registryUrl;
 
     private ZookeeperServiceDiscovery discovery;
+    private static String zookeeperConnectionAddress1;
+
+    @BeforeAll
+    public static void beforeAll() {
+        zookeeperConnectionAddress1 = System.getProperty("zookeeper.connection.address.1");
+    }
 
     @BeforeEach
     public void init() throws Exception {
-        zkServerPort = getAvailablePort();
-        zkServer = new TestingServer(zkServerPort, true);
-        zkServer.start();
-
-        this.registryUrl = URL.valueOf("zookeeper://127.0.0.1:" + zkServerPort);
+        this.registryUrl = URL.valueOf(zookeeperConnectionAddress1);
+        registryUrl.setScopeModel(ApplicationModel.defaultModel());
         this.discovery = new ZookeeperServiceDiscovery();
         this.discovery.initialize(registryUrl);
     }
@@ -74,7 +76,6 @@ public class ZookeeperServiceDiscoveryTest {
     @AfterEach
     public void close() throws Exception {
         discovery.destroy();
-        zkServer.stop();
     }
 
     @Test
@@ -82,8 +83,21 @@ public class ZookeeperServiceDiscoveryTest {
 
         DefaultServiceInstance serviceInstance = createServiceInstance(SERVICE_NAME, LOCALHOST, NetUtils.getAvailablePort());
 
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // Add Listener
+        discovery.addServiceInstancesChangedListener(
+                new ServiceInstancesChangedListener(Sets.newSet(SERVICE_NAME), discovery) {
+            @Override
+            public void onEvent(ServiceInstancesChangedEvent event) {
+                latch.countDown();
+            }
+        });
+
         discovery.register(serviceInstance);
 
+        latch.await();
+        
         List<ServiceInstance> serviceInstances = discovery.getInstances(SERVICE_NAME);
 
         assertTrue(serviceInstances.contains(serviceInstance));
@@ -108,7 +122,7 @@ public class ZookeeperServiceDiscoveryTest {
     }
 
     private DefaultServiceInstance createServiceInstance(String serviceName, String host, int port) {
-        return new DefaultServiceInstance(serviceName, host, port);
+        return new DefaultServiceInstance(serviceName, host, port, ScopeModelUtil.getApplicationModel(registryUrl.getScopeModel()));
     }
 
     @Test

@@ -18,6 +18,8 @@ package org.apache.dubbo.metadata;
 
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.extension.ExtensionLoader;
+import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.url.component.URLParam;
 import org.apache.dubbo.common.utils.ArrayUtils;
 import org.apache.dubbo.common.utils.CollectionUtils;
@@ -44,12 +46,14 @@ import static org.apache.dubbo.common.constants.QosConstants.ACCEPT_FOREIGN_IP;
 import static org.apache.dubbo.common.constants.QosConstants.QOS_ENABLE;
 import static org.apache.dubbo.common.constants.QosConstants.QOS_HOST;
 import static org.apache.dubbo.common.constants.QosConstants.QOS_PORT;
+import static org.apache.dubbo.metadata.RevisionResolver.EMPTY_REVISION;
 import static org.apache.dubbo.remoting.Constants.BIND_IP_KEY;
 import static org.apache.dubbo.remoting.Constants.BIND_PORT_KEY;
 import static org.apache.dubbo.rpc.Constants.INTERFACES;
 
 public class MetadataInfo implements Serializable {
     public static final MetadataInfo EMPTY = new MetadataInfo();
+    private static final Logger logger = LoggerFactory.getLogger(MetadataInfo.class);
 
     private String app;
     private String revision;
@@ -98,6 +102,10 @@ public class MetadataInfo implements Serializable {
         markChanged();
     }
 
+    public String getRevision() {
+        return revision;
+    }
+
     /**
      * Reported status and metadata modification must be synchronized if used in multiple threads.
      */
@@ -107,14 +115,20 @@ public class MetadataInfo implements Serializable {
         }
 
         if (CollectionUtils.isEmptyMap(services)) {
-            this.revision = RevisionResolver.getEmptyRevision(app);
+            this.revision = EMPTY_REVISION;
         } else {
             StringBuilder sb = new StringBuilder();
             sb.append(app);
             for (Map.Entry<String, ServiceInfo> entry : new TreeMap<>(services).entrySet()) {
                 sb.append(entry.getValue().toDescString());
             }
-            this.revision = RevisionResolver.calRevision(sb.toString());
+            String tempRevision = RevisionResolver.calRevision(sb.toString());
+            if (!StringUtils.isEquals(this.revision, tempRevision)) {
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("metadata revision changed: %s -> %s, app: %s, services: %d", this.revision, tempRevision, this.app, this.services.size()));
+                }
+                this.revision = tempRevision;
+            }
         }
         return revision;
     }
@@ -193,7 +207,7 @@ public class MetadataInfo implements Serializable {
         if (serviceInfo == null) {
             return null;
         }
-        return serviceInfo.toString();
+        return serviceInfo.toFullString();
     }
 
     @Override
@@ -223,12 +237,28 @@ public class MetadataInfo implements Serializable {
         return "metadata{" +
             "app='" + app + "'," +
             "revision='" + revision + "'," +
+            "size=" + (services == null ? 0 : services.size()) + "," +
+            "services=" + getSimplifiedServices(services) +
+            "}";
+    }
+
+    public String toFullString() {
+        return "metadata{" +
+            "app='" + app + "'," +
+            "revision='" + revision + "'," +
             "services=" + services +
             "}";
     }
 
+    private String getSimplifiedServices(Map<String, ServiceInfo> services) {
+        if (services == null) {
+            return "[]";
+        }
+
+        return services.keySet().toString();
+    }
+
     public static class ServiceInfo implements Serializable {
-        private static ExtensionLoader<MetadataParamsFilter> loader = ExtensionLoader.getExtensionLoader(MetadataParamsFilter.class);
         private String name;
         private String group;
         private String version;
@@ -250,6 +280,7 @@ public class MetadataInfo implements Serializable {
         private transient String matchKey;
 
         private transient URL url;
+        private transient ExtensionLoader<MetadataParamsFilter> loader;
 
         private final static String[] KEYS_TO_REMOVE = {MONITOR_KEY, BIND_IP_KEY, BIND_PORT_KEY, QOS_ENABLE,
             QOS_HOST, QOS_PORT, ACCEPT_FOREIGN_IP, VALIDATION_KEY, INTERFACES, PID_KEY, TIMESTAMP_KEY};
@@ -258,7 +289,7 @@ public class MetadataInfo implements Serializable {
 
         public ServiceInfo(URL url) {
             this(url.getServiceInterface(), url.getGroup(), url.getVersion(), url.getProtocol(), url.getPath(), null);
-
+            this.loader = url.getOrDefaultApplicationModel().getExtensionLoader(MetadataParamsFilter.class);
             this.url = url;
             Map<String, String> params = new HashMap<>();
             List<MetadataParamsFilter> filters = loader.getActivateExtension(url, "params-filter");
@@ -508,13 +539,16 @@ public class MetadataInfo implements Serializable {
 
         @Override
         public String toString() {
+            return getMatchKey();
+        }
+
+        public String toFullString() {
             return "service{" +
                 "name='" + name + "'," +
                 "group='" + group + "'," +
                 "version='" + version + "'," +
                 "protocol='" + protocol + "'," +
                 "params=" + params + "," +
-                "consumerParams=" + consumerParams +
                 "}";
         }
     }

@@ -17,6 +17,7 @@
 package org.apache.dubbo.config;
 
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ModuleModel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -163,9 +164,19 @@ public class ProviderConfig extends AbstractServiceConfig {
     private Integer exportThreadNum;
 
     /**
-     * Whether export should run in background or not
+     * Whether export should run in background or not.
+     *
+     * @deprecated replace with {@link ModuleConfig#setBackground(Boolean)}
+     * @see ModuleConfig#setBackground(Boolean)
      */
     private Boolean exportBackground;
+
+    public ProviderConfig() {
+    }
+
+    public ProviderConfig(ModuleModel moduleModel) {
+        super(moduleModel);
+    }
 
     @Deprecated
     public void setProtocol(String protocol) {
@@ -340,41 +351,6 @@ public class ProviderConfig extends AbstractServiceConfig {
         this.status = status;
     }
 
-    @Override
-    public String getCluster() {
-        return super.getCluster();
-    }
-
-    @Override
-    public Integer getConnections() {
-        return super.getConnections();
-    }
-
-    @Override
-    public Integer getTimeout() {
-        return super.getTimeout();
-    }
-
-    @Override
-    public Integer getRetries() {
-        return super.getRetries();
-    }
-
-    @Override
-    public String getLoadbalance() {
-        return super.getLoadbalance();
-    }
-
-    @Override
-    public Boolean isAsync() {
-        return super.isAsync();
-    }
-
-    @Override
-    public Integer getActives() {
-        return super.getActives();
-    }
-
     public String getTransporter() {
         return transporter;
     }
@@ -436,20 +412,34 @@ public class ProviderConfig extends AbstractServiceConfig {
         this.wait = wait;
     }
 
+    @Deprecated
     @Parameter(key = EXPORT_THREAD_NUM_KEY, excluded = true)
     public Integer getExportThreadNum() {
         return exportThreadNum;
     }
 
+    @Deprecated
     public void setExportThreadNum(Integer exportThreadNum) {
         this.exportThreadNum = exportThreadNum;
     }
 
+    /**
+     * @deprecated replace with {@link ModuleConfig#getBackground()}
+     * @see ModuleConfig#getBackground()
+     */
+    @Deprecated
     @Parameter(key = EXPORT_BACKGROUND_KEY, excluded = true)
     public Boolean getExportBackground() {
         return exportBackground;
     }
 
+    /**
+     * Whether export should run in background or not.
+     *
+     * @deprecated replace with {@link ModuleConfig#setBackground(Boolean)}
+     * @see ModuleConfig#setBackground(Boolean)
+     */
+    @Deprecated
     public void setExportBackground(Boolean exportBackground) {
         this.exportBackground = exportBackground;
     }
