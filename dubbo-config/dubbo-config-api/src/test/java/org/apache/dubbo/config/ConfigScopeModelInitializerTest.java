@@ -14,29 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.dubbo.config;
 
-package org.apache.dubbo.rpc.protocol.tri;
-
+import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.FrameworkModel;
+import org.apache.dubbo.rpc.model.ModuleModel;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GrpcStatusTest {
+public class ConfigScopeModelInitializerTest {
+    private FrameworkModel frameworkModel;
+    private ApplicationModel applicationModel;
+    private ModuleModel moduleModel;
 
-    @Test
-    public void fromMessage() {
-        String origin = "haha test 😊";
-        final GrpcStatus status = GrpcStatus.fromCode(GrpcStatus.Code.INTERNAL)
-                .withDescription(origin);
-        Assertions.assertNotEquals(origin, status.toMessage());
-        final String decoded = GrpcStatus.decodeMessage(status.toMessage());
-        Assertions.assertEquals(origin, decoded);
+    @BeforeEach
+    public void setUp() {
+        frameworkModel = new FrameworkModel();
+        applicationModel = new ApplicationModel(frameworkModel);
+        moduleModel = new ModuleModel(applicationModel);
+    }
+
+    @AfterEach
+    public void reset() {
+        frameworkModel.destroy();
     }
 
     @Test
-    public void toMessage() {
-        String content = "\t\ntest with whitespace\r\nand Unicode BMP ☺ and non-BMP 😈\t\n";
-        final GrpcStatus status = GrpcStatus.fromCode(GrpcStatus.Code.INTERNAL)
-                .withDescription(content);
-        Assertions.assertNotEquals(content, status.toMessage());
+    public void test(){
+        Assertions.assertNotNull(applicationModel.getDeployer());
+        Assertions.assertNotNull(moduleModel.getDeployer());
     }
 }
