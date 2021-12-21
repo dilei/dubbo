@@ -16,7 +16,10 @@
  */
 package org.apache.dubbo.spring.boot.actuate.autoconfigure;
 
+import com.google.common.collect.Maps;
 import org.apache.dubbo.common.BaseServiceMetadata;
+import org.apache.dubbo.config.ApplicationConfig;
+import org.apache.dubbo.config.ProtocolConfig;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.apache.dubbo.config.bootstrap.DubboBootstrap;
@@ -39,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.client.RestTemplate;
@@ -82,7 +86,7 @@ import java.util.function.Supplier;
                 "management.endpoints.web.exposure.include = *",
         })
 @EnableAutoConfiguration
-@Disabled
+// @Disabled
 public class DubboEndpointAnnotationAutoConfigurationTest {
 
     @Autowired
@@ -113,7 +117,7 @@ public class DubboEndpointAnnotationAutoConfigurationTest {
 
     @BeforeEach
     public void init() {
-        DubboBootstrap.reset();
+        // DubboBootstrap.reset();
     }
 
     @AfterEach
@@ -233,7 +237,6 @@ public class DubboEndpointAnnotationAutoConfigurationTest {
         Assert.assertEquals(objectMapper.writeValueAsString(resultsSupplier.get()), response);
     }
 
-
     interface DemoService {
         String sayHello(String name);
     }
@@ -259,6 +262,25 @@ public class DubboEndpointAnnotationAutoConfigurationTest {
 
         @DubboReference(group = DEMO_GROUP, version = DEMO_VERSION)
         private DemoService demoService;
+
+        @Bean
+        public ApplicationConfig applicationConfig() {
+            ApplicationConfig applicationConfig = new ApplicationConfig();
+            applicationConfig.setName("${dubbo.application.id}");
+            applicationConfig.setQosEnable(false);
+            return applicationConfig;
+        }
+
+        @Bean("${dubbo.protocol.id}")
+        public ProtocolConfig protocolConfig() {
+            ProtocolConfig protocolConfig = new ProtocolConfig();
+            protocolConfig.setName("${dubbo.protocol.name}");
+            protocolConfig.setPort(20880);
+            protocolConfig.setTransporter("netty4");
+            protocolConfig.setThreadpool("fixed");
+            protocolConfig.setThreads(800);
+            return protocolConfig;
+        }
 
     }
 }
