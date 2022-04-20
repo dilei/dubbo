@@ -217,7 +217,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
             return GenericService.class;
         }
         try {
-            if (interfaceName != null && interfaceName.length() > 0) {
+            if (StringUtils.isNotEmpty(interfaceName)) {
                 return Class.forName(interfaceName, true, classLoader);
             }
         } catch (ClassNotFoundException t) {
@@ -234,24 +234,13 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
         }
     }
 
-    @Override
-    public String getInterface() {
-        return interfaceName;
-    }
-
-    @Override
-    public void setInterface(String interfaceName) {
-        this.interfaceName = interfaceName;
-    }
-
     public void setInterface(Class<?> interfaceClass) {
         if (interfaceClass != null && !interfaceClass.isInterface()) {
             throw new IllegalStateException("The interface class " + interfaceClass + " is not a interface!");
         }
         setInterface(interfaceClass == null ? null : interfaceClass.getName());
-        if (getInterfaceClassLoader() == null) {
-            setInterfaceClassLoader(interfaceClass == null ? null : interfaceClass.getClassLoader());
-        }
+        this.interfaceClass = interfaceClass;
+        setInterfaceClassLoader(interfaceClass == null ? null : interfaceClass.getClassLoader());
     }
 
     public String getClient() {
@@ -327,11 +316,9 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
 
     @Override
     protected void computeValidRegistryIds() {
-        if (consumer != null) {
-            if (notHasSelfRegistryProperty()) {
-                setRegistries(consumer.getRegistries());
-                setRegistryIds(consumer.getRegistryIds());
-            }
+        if (consumer != null && notHasSelfRegistryProperty()) {
+            setRegistries(consumer.getRegistries());
+            setRegistryIds(consumer.getRegistryIds());
         }
         super.computeValidRegistryIds();
     }

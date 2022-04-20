@@ -40,12 +40,12 @@ public class ModuleServiceRepository {
     /**
      * services
      */
-    private ConcurrentMap<String, List<ServiceDescriptor>> services = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<ServiceDescriptor>> services = new ConcurrentHashMap<>();
 
     /**
      * consumers ( key - group/interface:version value - consumerModel list)
      */
-    private ConcurrentMap<String, List<ConsumerModel>> consumers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<ConsumerModel>> consumers = new ConcurrentHashMap<>();
 
     /**
      * providers
@@ -99,8 +99,15 @@ public class ModuleServiceRepository {
         frameworkServiceRepository.registerProvider(providerModel);
     }
 
+    public ServiceDescriptor registerService(ServiceDescriptor serviceDescriptor) {
+        return registerService(serviceDescriptor.getServiceInterfaceClass(),serviceDescriptor);
+    }
+
     public ServiceDescriptor registerService(Class<?> interfaceClazz) {
-        ServiceDescriptor serviceDescriptor = new ServiceDescriptor(interfaceClazz);
+        ServiceDescriptor serviceDescriptor = new ReflectionServiceDescriptor(interfaceClazz);
+        return registerService(interfaceClazz,serviceDescriptor);
+    }
+    public ServiceDescriptor registerService(Class<?> interfaceClazz,ServiceDescriptor serviceDescriptor) {
         List<ServiceDescriptor> serviceDescriptors = services.computeIfAbsent(interfaceClazz.getName(),
             k -> new CopyOnWriteArrayList<>());
         synchronized (serviceDescriptors) {
@@ -186,6 +193,15 @@ public class ModuleServiceRepository {
     public List<ServiceDescriptor> getAllServices() {
         List<ServiceDescriptor> serviceDescriptors = services.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
         return Collections.unmodifiableList(serviceDescriptors);
+    }
+
+    public ServiceDescriptor getService(String serviceName) {
+        // TODO, may need to distinguish service by class loader.
+        List<ServiceDescriptor> serviceDescriptors = services.get(serviceName);
+        if (CollectionUtils.isEmpty(serviceDescriptors)) {
+            return null;
+        }
+        return serviceDescriptors.get(0);
     }
 
     public ServiceDescriptor lookupService(String interfaceName) {

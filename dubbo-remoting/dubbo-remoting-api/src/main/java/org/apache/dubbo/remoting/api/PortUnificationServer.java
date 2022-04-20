@@ -16,19 +16,6 @@
  */
 package org.apache.dubbo.remoting.api;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroupFuture;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.Future;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.extension.ExtensionLoader;
@@ -38,6 +25,20 @@ import org.apache.dubbo.common.utils.ExecutorUtil;
 import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.remoting.Constants;
 import org.apache.dubbo.remoting.utils.UrlUtils;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -58,6 +59,10 @@ public class PortUnificationServer {
     private static final Logger logger = LoggerFactory.getLogger(PortUnificationServer.class);
     private final List<WireProtocol> protocols;
     private final URL url;
+
+    private final DefaultChannelGroup channels = new DefaultChannelGroup(
+        GlobalEventExecutor.INSTANCE);
+
     private final int serverShutdownTimeoutMills;
     /**
      * netty server bootstrap.
@@ -67,7 +72,6 @@ public class PortUnificationServer {
      * the boss channel that receive connections and dispatch these to worker channel.
      */
     private Channel channel;
-    private DefaultChannelGroup channelGroup;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
@@ -75,9 +79,11 @@ public class PortUnificationServer {
         // you can customize name and type of client thread pool by THREAD_NAME_KEY and THREADPOOL_KEY in CommonConstants.
         // the handler will be wrapped: MultiMessageHandler->HeartbeatHandler->handler
         this.url = ExecutorUtil.setThreadName(url, "DubboPUServerHandler");
-        this.protocols = ExtensionLoader.getExtensionLoader(WireProtocol.class).getActivateExtension(url, new String[0]);
+        this.protocols = ExtensionLoader.getExtensionLoader(WireProtocol.class)
+            .getActivateExtension(url, new String[0]);
         // read config before destroy
-        serverShutdownTimeoutMills = ConfigurationUtils.getServerShutdownTimeout(getUrl().getOrDefaultModuleModel());
+        serverShutdownTimeoutMills = ConfigurationUtils.getServerShutdownTimeout(
+            getUrl().getOrDefaultModuleModel());
     }
 
     public URL getUrl() {
@@ -121,14 +127,18 @@ public class PortUnificationServer {
 //                        p.addLast(new LoggingHandler(LogLevel.DEBUG));
 
                     final boolean enableSsl = getUrl().getParameter(SSL_ENABLED_KEY, false);
+                    final PortUnificationServerHandler puHandler;
                     if (enableSsl) {
-                        p.addLast("negotiation-ssl", new SslServerTlsHandler(getUrl()));
+                        puHandler = new PortUnificationServerHandler(url,
+                            SslContexts.buildServerSslContext(url), true, protocols, channels);
+                    } else {
+                        puHandler = new PortUnificationServerHandler(url, null, false, protocols,
+                            channels);
                     }
 
-                    final PortUnificationServerHandler puHandler = new PortUnificationServerHandler(url, protocols);
-                    p.addLast("server-idle-handler", new IdleStateHandler(0, 0, idleTimeout, MILLISECONDS));
+                    p.addLast("server-idle-handler",
+                        new IdleStateHandler(0, 0, idleTimeout, MILLISECONDS));
                     p.addLast("negotiation-protocol", puHandler);
-                    channelGroup = puHandler.getChannels();
                 }
             });
         // bind
@@ -154,10 +164,7 @@ public class PortUnificationServer {
                 channel = null;
             }
 
-            if (channelGroup != null) {
-                ChannelGroupFuture closeFuture = channelGroup.close();
-                closeFuture.await(serverShutdownTimeoutMills);
-            }
+            channels.close().await(serverShutdownTimeoutMills);
             final long cost = System.currentTimeMillis() - st;
             logger.info("Port unification server closed. cost:" + cost);
         } catch (InterruptedException e) {
@@ -172,10 +179,12 @@ public class PortUnificationServer {
             if (bootstrap != null) {
                 long timeout = serverShutdownTimeoutMills;
                 long quietPeriod = Math.min(2000L, timeout);
-                Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
-                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod, timeout, MILLISECONDS);
-                bossGroupShutdownFuture.syncUninterruptibly();
-                workerGroupShutdownFuture.syncUninterruptibly();
+                Future<?> bossGroupShutdownFuture = bossGroup.shutdownGracefully(quietPeriod,
+                    timeout, MILLISECONDS);
+                Future<?> workerGroupShutdownFuture = workerGroup.shutdownGracefully(quietPeriod,
+                    timeout, MILLISECONDS);
+                bossGroupShutdownFuture.awaitUninterruptibly(timeout, MILLISECONDS);
+                workerGroupShutdownFuture.awaitUninterruptibly(timeout, MILLISECONDS);
             }
         } catch (Throwable e) {
             logger.warn(e.getMessage(), e);

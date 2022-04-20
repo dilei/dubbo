@@ -283,9 +283,9 @@ public class DefaultServiceInstance implements ServiceInstance {
     }
 
     @Override
-    public InstanceAddressURL toURL() {
+    public InstanceAddressURL toURL(String protocol) {
         if (instanceAddressURL == null) {
-            instanceAddressURL = new InstanceAddressURL(this, serviceMetadata);
+            instanceAddressURL = new InstanceAddressURL(this, serviceMetadata, protocol);
         }
         return instanceAddressURL;
     }
@@ -306,7 +306,11 @@ public class DefaultServiceInstance implements ServiceInstance {
             if (entry.getKey().equals(EXPORTED_SERVICES_REVISION_PROPERTY_NAME)) {
                 continue;
             }
-            equals = equals && entry.getValue().equals(that.getMetadata().get(entry.getKey()));
+            if (entry.getValue() == null) {
+                equals = equals && (entry.getValue() == that.getMetadata().get(entry.getKey()));
+            } else {
+                equals = equals && entry.getValue().equals(that.getMetadata().get(entry.getKey()));
+            }
         }
 
         return equals;
@@ -331,7 +335,7 @@ public class DefaultServiceInstance implements ServiceInstance {
 
     public String toFullString() {
         return "DefaultServiceInstance{" +
-                ", serviceName='" + serviceName + '\'' +
+                "serviceName='" + serviceName + '\'' +
                 ", host='" + host + '\'' +
                 ", port=" + port +
                 ", enabled=" + enabled +

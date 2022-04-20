@@ -23,15 +23,16 @@ import org.apache.dubbo.rpc.cluster.router.state.StateRouter;
 
 /**
  * Service level router factory
+ * ServiceRouter should before AppRouter
  */
-@Activate(order = 300)
+@Activate(order = 140)
 public class ServiceStateRouterFactory extends CacheableStateRouterFactory {
 
     public static final String NAME = "service";
 
     @Override
     protected <T> StateRouter<T> createRouter(Class<T> interfaceClass, URL url) {
-        return new ServiceRouter<T>(url);
+        return new ServiceStateRouter<T>(url);
     }
 
 }
