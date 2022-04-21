@@ -130,7 +130,7 @@ public class DefaultFuture extends CompletableFuture<Object> {
         return CHANNELS.containsValue(channel);
     }
 
-    public static void sent(Channel channel, Request re quest) {
+    public static void sent(Channel channel, Request request) {
         DefaultFuture future = FUTURES.get(request.getId());
         if (future != null) {
             future.doSent();
