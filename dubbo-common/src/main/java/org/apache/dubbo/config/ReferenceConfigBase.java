@@ -48,15 +48,13 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
 
     private static final long serialVersionUID = -5864351140409987595L;
 
+    private static final String ORIGIN_CONFIG = "ORIGIN_CONFIG";
+
     /**
      * The interface class of the reference service
      */
     protected Class<?> interfaceClass;
 
-    /**
-     * client type
-     */
-    protected String client;
 
     /**
      * The url for peer-to-peer invocation
@@ -68,26 +66,20 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
      */
     protected ConsumerConfig consumer;
 
-    /**
-     * Only the service provider of the specified protocol is invoked, and other protocols are ignored.
-     */
-    protected String protocol;
-
-
     public ReferenceConfigBase() {
         serviceMetadata = new ServiceMetadata();
-        serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
+        serviceMetadata.addAttribute(ORIGIN_CONFIG, this);
     }
 
     public ReferenceConfigBase(ModuleModel moduleModel) {
         super(moduleModel);
         serviceMetadata = new ServiceMetadata();
-        serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
+        serviceMetadata.addAttribute(ORIGIN_CONFIG, this);
     }
 
     public ReferenceConfigBase(Reference reference) {
         serviceMetadata = new ServiceMetadata();
-        serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
+        serviceMetadata.addAttribute(ORIGIN_CONFIG, this);
         appendAnnotation(Reference.class, reference);
         setMethods(MethodConfig.constructMethodConfig(reference.methods()));
     }
@@ -95,7 +87,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
     public ReferenceConfigBase(ModuleModel moduleModel, Reference reference) {
         super(moduleModel);
         serviceMetadata = new ServiceMetadata();
-        serviceMetadata.addAttribute("ORIGIN_CONFIG", this);
+        serviceMetadata.addAttribute(ORIGIN_CONFIG, this);
         appendAnnotation(Reference.class, reference);
         setMethods(MethodConfig.constructMethodConfig(reference.methods()));
     }
@@ -147,6 +139,11 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
 
     @Override
     public Map<String, String> getMetaData() {
+        return getMetaData(null);
+    }
+
+    @Override
+    public Map<String, String> getMetaData(String prefix) {
         Map<String, String> metaData = new HashMap<>();
         ConsumerConfig consumer = this.getConsumer();
         // consumer should be initialized at preProcessRefresh()
@@ -154,8 +151,8 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
             throw new IllegalStateException("Consumer is not initialized");
         }
         // use consumer attributes as default value
-        appendAttributes(metaData, consumer);
-        appendAttributes(metaData, this);
+        appendAttributes(metaData, consumer, prefix);
+        appendAttributes(metaData, this, prefix);
         return metaData;
     }
 
@@ -168,7 +165,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
         Class<?> actualInterface = interfaceClass;
         if (interfaceClass == GenericService.class) {
             try {
-                if(getInterfaceClassLoader() != null) {
+                if (getInterfaceClassLoader() != null) {
                     actualInterface = Class.forName(interfaceName, false, getInterfaceClassLoader());
                 } else {
                     actualInterface = Class.forName(interfaceName);
@@ -194,7 +191,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
         if (StringUtils.isBlank(generic) && getConsumer() != null) {
             generic = getConsumer().getGeneric();
         }
-        if(getInterfaceClassLoader() != null) {
+        if (getInterfaceClassLoader() != null) {
             interfaceClass = determineInterfaceClass(generic, interfaceName, getInterfaceClassLoader());
         } else {
             interfaceClass = determineInterfaceClass(generic, interfaceName);
@@ -243,14 +240,6 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
         setInterfaceClassLoader(interfaceClass == null ? null : interfaceClass.getClassLoader());
     }
 
-    public String getClient() {
-        return client;
-    }
-
-    public void setClient(String client) {
-        this.client = client;
-    }
-
     @Parameter(excluded = true)
     public String getUrl() {
         return url;
@@ -266,14 +255,6 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
 
     public void setConsumer(ConsumerConfig consumer) {
         this.consumer = consumer;
-    }
-
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public void setProtocol(String protocol) {
-        this.protocol = protocol;
     }
 
     public ServiceMetadata getServiceMetadata() {
@@ -293,7 +274,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
             }
             if (resolveFile != null && resolveFile.length() > 0) {
                 Properties properties = new RegexProperties();
-                try (FileInputStream fis = new FileInputStream(new File(resolveFile))) {
+                try (FileInputStream fis = new FileInputStream(resolveFile)) {
                     properties.load(fis);
                 } catch (IOException e) {
                     throw new IllegalStateException("Failed to load " + resolveFile + ", cause: " + e.getMessage(), e);
@@ -302,7 +283,7 @@ public abstract class ReferenceConfigBase<T> extends AbstractReferenceConfig {
                 resolve = properties.getProperty(interfaceName);
             }
         }
-        if (resolve != null && resolve.length() > 0) {
+        if (StringUtils.isNotEmpty(resolve)) {
             url = resolve;
             if (logger.isWarnEnabled()) {
                 if (resolveFile != null) {

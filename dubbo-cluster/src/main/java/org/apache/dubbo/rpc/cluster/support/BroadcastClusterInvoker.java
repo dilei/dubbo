@@ -24,9 +24,12 @@ import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.Result;
 import org.apache.dubbo.rpc.RpcContext;
 import org.apache.dubbo.rpc.RpcException;
+import org.apache.dubbo.rpc.RpcInvocation;
 import org.apache.dubbo.rpc.cluster.Directory;
 import org.apache.dubbo.rpc.cluster.LoadBalance;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -64,9 +67,16 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
         int failThresholdIndex = invokers.size() * broadcastFailPercent / MAX_BROADCAST_FAIL_PERCENT;
         int failIndex = 0;
-        for (Invoker<T> invoker : invokers) {
+        for (int i = 0, invokersSize = invokers.size(); i < invokersSize; i++) {
+            Invoker<T> invoker = invokers.get(i);
+            RpcContext.RestoreContext restoreContext = new RpcContext.RestoreContext();
             try {
-                result = invokeWithContext(invoker, invocation);
+                RpcInvocation subInvocation = new RpcInvocation(invocation.getTargetServiceUniqueName(),
+                    invocation.getServiceModel(), invocation.getMethodName(), invocation.getServiceName(), invocation.getProtocolServiceKey(),
+                    invocation.getParameterTypes(), invocation.getArguments(), invocation.copyObjectAttachments(),
+                    invocation.getInvoker(), Collections.synchronizedMap(new HashMap<>(invocation.getAttributes())),
+                    invocation instanceof RpcInvocation ? ((RpcInvocation) invocation).getInvokeMode() : null);
+                result = invokeWithContext(invoker, subInvocation);
                 if (null != result && result.hasException()) {
                     Throwable resultException = result.getException();
                     if (null != resultException) {
@@ -84,6 +94,10 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 failIndex++;
                 if (failIndex == failThresholdIndex) {
                     break;
+                }
+            } finally {
+                if (i != invokersSize - 1) {
+                    restoreContext.restore();
                 }
             }
         }

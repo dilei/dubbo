@@ -174,7 +174,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected String ondisconnect;
 
     /**
-     * The metrics configuration
+     * The metadata report configuration
      */
     protected MetadataReportConfig metadataReportConfig;
 
@@ -187,7 +187,15 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     protected String tag;
 
-    private  Boolean auth;
+    private Boolean auth;
+
+    /*Indicates to create separate instances or not for services/references that have the same serviceKey.
+     * By default, all services/references that have the same serviceKey will share the same instance and process.
+     *
+     * This key currently can only work when using ReferenceConfig and SimpleReferenceCache together.
+     * Call ReferenceConfig.get() directly will not check this attribute.
+     */
+    private Boolean singleton;
 
     public AbstractInterfaceConfig() {
     }
@@ -216,11 +224,6 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     @Override
     protected void postProcessAfterScopeModelChanged(ScopeModel oldScopeModel, ScopeModel newScopeModel) {
         super.postProcessAfterScopeModelChanged(oldScopeModel, newScopeModel);
-        // remove this config from old ConfigManager
-//        if (oldScopeModel != null && oldScopeModel instanceof ModuleModel) {
-//            ((ModuleModel)oldScopeModel).getConfigManager().removeConfig(this);
-//        }
-
         // change referenced config's scope model
         ApplicationModel applicationModel = ScopeModelUtil.getApplicationModel(scopeModel);
         if (this.configCenter != null && this.configCenter.getScopeModel() != applicationModel) {
@@ -284,7 +287,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     /**
-     * To obtain the method list in the port, use reflection when in native mode and javaassist otherwise.
+     * To obtain the method list in the port, use reflection when in native mode and javassist otherwise.
      * @param interfaceClass
      * @return
      */
@@ -452,7 +455,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
 
         try {
-            //Check if the localClass a constructor with parameter who's type is interfaceClass
+            //Check if the localClass a constructor with parameter whose type is interfaceClass
             ReflectUtils.findConstructor(localClass, interfaceClass);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("No such constructor \"public " + localClass.getSimpleName() +
@@ -592,7 +595,6 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     public void setProxy(String proxy) {
-
         this.proxy = proxy;
     }
 
@@ -855,14 +857,22 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     public SslConfig getSslConfig() {
         return getConfigManager().getSsl().orElse(null);
     }
-    
+
+    public Boolean getSingleton() {
+        return singleton;
+    }
+
+    public void setSingleton(Boolean singleton) {
+        this.singleton = singleton;
+    }
+
     protected void initServiceMetadata(AbstractInterfaceConfig interfaceConfig) {
         serviceMetadata.setVersion(getVersion(interfaceConfig));
         serviceMetadata.setGroup(getGroup(interfaceConfig));
         serviceMetadata.setDefaultGroup(getGroup(interfaceConfig));
         serviceMetadata.setServiceInterfaceName(getInterface());
     }
-    
+
     public String getGroup(AbstractInterfaceConfig interfaceConfig) {
         return StringUtils.isEmpty(getGroup()) ? (interfaceConfig != null ? interfaceConfig.getGroup() : getGroup()) : getGroup();
     }

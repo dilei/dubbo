@@ -21,6 +21,7 @@ import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
 import org.apache.dubbo.common.utils.ConcurrentHashSet;
+import org.apache.dubbo.config.ApplicationConfig;
 import org.apache.dubbo.metadata.MetadataInfo;
 import org.apache.dubbo.metadata.report.MetadataReport;
 import org.apache.dubbo.metadata.report.MetadataReportInstance;
@@ -33,13 +34,16 @@ import org.apache.dubbo.registry.client.metadata.store.MetaCacheManager;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_METADATA_STORAGE_TYPE;
+import static org.apache.dubbo.common.constants.CommonConstants.REGISTRY_LOCAL_FILE_CACHE_ENABLED;
 import static org.apache.dubbo.common.constants.CommonConstants.REMOTE_METADATA_STORAGE_TYPE;
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_CLUSTER_KEY;
 import static org.apache.dubbo.metadata.RevisionResolver.EMPTY_REVISION;
 import static org.apache.dubbo.registry.client.metadata.ServiceInstanceMetadataUtils.EXPORTED_SERVICES_REVISION_PROPERTY_NAME;
+import static org.apache.dubbo.registry.client.metadata.ServiceInstanceMetadataUtils.getExportedServicesRevision;
 import static org.apache.dubbo.registry.client.metadata.ServiceInstanceMetadataUtils.isValidInstance;
 import static org.apache.dubbo.registry.client.metadata.ServiceInstanceMetadataUtils.setMetadataStorageType;
 
@@ -80,11 +84,13 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
         this.registryURL = registryURL;
         this.serviceName = serviceName;
         this.metadataInfo = new MetadataInfo(serviceName);
-        this.metaCacheManager = new MetaCacheManager(getCacheNameSuffix(),
+        boolean localCacheEnabled = registryURL.getParameter(REGISTRY_LOCAL_FILE_CACHE_ENABLED, true);
+        this.metaCacheManager = new MetaCacheManager(localCacheEnabled, getCacheNameSuffix(),
             applicationModel.getFrameworkModel().getBeanFactory()
             .getBean(FrameworkExecutorRepository.class).getCacheRefreshingScheduledExecutor());
     }
 
+    @Override
     public synchronized void register() throws RuntimeException {
         this.serviceInstance = createServiceInstance(this.metadataInfo);
         if (!isValidInstance(this.serviceInstance)) {
@@ -235,11 +241,12 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
     }
 
     protected void doUpdate(ServiceInstance serviceInstance) throws RuntimeException {
-
         this.unregister();
 
-        reportMetadata(serviceInstance.getServiceMetadata());
-        this.doRegister(serviceInstance);
+        if (!EMPTY_REVISION.equals(getExportedServicesRevision(serviceInstance))) {
+            reportMetadata(serviceInstance.getServiceMetadata());
+            this.doRegister(serviceInstance);
+        }
     }
 
     @Override
@@ -262,13 +269,10 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
     }
 
     protected boolean calOrUpdateInstanceRevision(ServiceInstance instance) {
-        String existingInstanceRevision = instance.getMetadata().get(EXPORTED_SERVICES_REVISION_PROPERTY_NAME);
+        String existingInstanceRevision = getExportedServicesRevision(instance);
         MetadataInfo metadataInfo = instance.getServiceMetadata();
         String newRevision = metadataInfo.calAndGetRevision();
         if (!newRevision.equals(existingInstanceRevision)) {
-            if (EMPTY_REVISION.equals(newRevision)) {
-                return false;
-            }
             instance.getMetadata().put(EXPORTED_SERVICES_REVISION_PROPERTY_NAME, metadataInfo.getRevision());
             return true;
         }
@@ -299,10 +303,18 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
         if (i != -1) {
             name = name.substring(0, i);
         }
+        StringBuilder stringBuilder = new StringBuilder(128);
+        Optional<ApplicationConfig> application = applicationModel.getApplicationConfigManager().getApplication();
+        if(application.isPresent()) {
+            stringBuilder.append(application.get().getName());
+            stringBuilder.append(".");
+        }
+        stringBuilder.append(name.toLowerCase());
         URL url = this.getUrl();
         if (url != null) {
-           return name.toLowerCase() + url.getBackupAddress();
+            stringBuilder.append(".");
+            stringBuilder.append(url.getBackupAddress());
         }
-        return name.toLowerCase();
+        return stringBuilder.toString();
     }
 }
